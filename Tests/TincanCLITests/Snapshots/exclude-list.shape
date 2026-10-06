@@ -1,0 +1,10 @@
+(root): object
+command: string
+data: array
+data[]: object
+data[].name: string
+data[].ref: string
+ok: bool
+schema: number
+tincan: string
+warnings: array (empty)

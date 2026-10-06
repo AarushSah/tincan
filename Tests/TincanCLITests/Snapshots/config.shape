@@ -1,0 +1,15 @@
+(root): object
+command: string
+data: object
+data.effective_region: string
+data.excluded: array (empty)
+data.excluded_addresses: number
+data.excluded_conversations: number
+data.path: string
+data.region: string
+data.send_typing: string
+data.send_wpm: number
+ok: bool
+schema: number
+tincan: string
+warnings: array (empty)

@@ -1,0 +1,85 @@
+# Inactive draft: GitHub runs workflows only from .github/workflows/. See README.md here.
+#
+# Builds and tests tincan on pushes to main and on pull requests, and fails on any
+# formatting finding.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A newer push to the same branch or pull request cancels the run in progress.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Xcode 26.6 ships Swift 6.3.3, the toolchain tincan is developed with. The macos-26
+  # image carries it; its README in actions/runner-images lists the Xcode versions.
+  XCODE_VERSION: "26.6"
+
+jobs:
+  test:
+    name: Build and test
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Select Xcode
+        run: |
+          xcode="/Applications/Xcode_${XCODE_VERSION}.app"
+          if [ -d "$xcode" ]; then
+            sudo xcode-select --switch "$xcode"
+          else
+            echo "::warning::$xcode isn't on this runner image; using $(xcode-select --print-path)."
+          fi
+          swift --version
+          swift_version="$(swift --version 2>&1 | sed -nE 's/.*Swift version ([0-9.]+).*/\1/p' | head -1)"
+          case "$swift_version" in
+            6.* | [7-9].*) ;;
+            *) echo "::error::tincan needs Swift 6 or later; found '${swift_version}'."; exit 1 ;;
+          esac
+          echo "SWIFT_VERSION=$swift_version" >> "$GITHUB_ENV"
+
+      # Pull requests restore the cache that main saved and never upload one. The key
+      # includes the compiler, whose module files a different Swift can't read.
+      - name: Restore .build
+        uses: actions/cache/restore@v6
+        with:
+          path: .build
+          key: build-${{ runner.os }}-${{ runner.arch }}-swift-${{ env.SWIFT_VERSION }}-${{ hashFiles('Package.resolved') }}-${{ github.sha }}
+          restore-keys: |
+            build-${{ runner.os }}-${{ runner.arch }}-swift-${{ env.SWIFT_VERSION }}-${{ hashFiles('Package.resolved') }}-
+            build-${{ runner.os }}-${{ runner.arch }}-swift-${{ env.SWIFT_VERSION }}-
+
+      - name: Build
+        run: swift build
+
+      # Builds again (a no-op here) and runs `swift test --skip Live`: no test reads this
+      # runner's data or sends anything. The lint job checks formatting.
+      - name: Test
+        run: ./scripts/check.sh --no-lint
+
+      - name: Save .build
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/cache/save@v6
+        with:
+          path: .build
+          key: build-${{ runner.os }}-${{ runner.arch }}-swift-${{ env.SWIFT_VERSION }}-${{ hashFiles('Package.resolved') }}-${{ github.sha }}
+
+  lint:
+    name: Formatting
+    # swift format needs no Mac, and a Linux minute costs a tenth of a macOS one. The
+    # swift:6.3 image carries the same swift-format as Xcode 26.6.
+    runs-on: ubuntu-latest
+    container: swift:6.3
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: swift format lint
+        run: ./scripts/lint.sh

@@ -1,0 +1,347 @@
+/// Apple's table definitions for the databases tincan reads, copied from `sqlite3 .schema`
+/// on macOS 26 so fixtures exercise the real column names, defaults and indexes. Only the
+/// tables tincan queries are included. Triggers are left out because they call functions
+/// that only exist inside Messages.
+///
+/// When Apple changes a schema, refresh these from a current Mac:
+///
+///     sqlite3 ~/Library/Messages/chat.db .schema
+///     sqlite3 ~/Library/Application\ Support/CallHistoryDB/CallHistory.storedata .schema
+///
+/// Copy only the `CREATE TABLE` and `CREATE INDEX` statements; the schema holds no messages.
+enum Schemas {
+    /// `~/Library/Messages/chat.db`: conversations, handles, messages and attachments.
+    static let messagesTables: [String] = [
+        """
+        CREATE TABLE handle (
+            ROWID INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
+            id TEXT NOT NULL,
+            country TEXT,
+            service TEXT NOT NULL,
+            uncanonicalized_id TEXT,
+            person_centric_id TEXT,
+            UNIQUE (id, service)
+        )
+        """,
+        """
+        CREATE TABLE chat (
+            ROWID INTEGER PRIMARY KEY AUTOINCREMENT,
+            guid TEXT UNIQUE NOT NULL,
+            style INTEGER,
+            state INTEGER,
+            account_id TEXT,
+            properties BLOB,
+            chat_identifier TEXT,
+            service_name TEXT,
+            room_name TEXT,
+            account_login TEXT,
+            is_archived INTEGER DEFAULT 0,
+            last_addressed_handle TEXT,
+            display_name TEXT,
+            group_id TEXT,
+            is_filtered INTEGER,
+            successful_query INTEGER,
+            engram_id TEXT,
+            server_change_token TEXT,
+            ck_sync_state INTEGER DEFAULT 0,
+            original_group_id TEXT,
+            last_read_message_timestamp INTEGER DEFAULT 0,
+            cloudkit_record_id TEXT,
+            last_addressed_sim_id TEXT,
+            is_blackholed INTEGER DEFAULT 0,
+            syndication_date INTEGER DEFAULT 0,
+            syndication_type INTEGER DEFAULT 0,
+            is_recovered INTEGER DEFAULT 0,
+            is_deleting_incoming_messages INTEGER DEFAULT 0,
+            is_pending_review INTEGER DEFAULT 0
+        )
+        """,
+        """
+        CREATE TABLE message (
+            ROWID INTEGER PRIMARY KEY AUTOINCREMENT,
+            guid TEXT UNIQUE NOT NULL,
+            text TEXT,
+            replace INTEGER DEFAULT 0,
+            service_center TEXT,
+            handle_id INTEGER DEFAULT 0,
+            subject TEXT,
+            country TEXT,
+            attributedBody BLOB,
+            version INTEGER DEFAULT 0,
+            type INTEGER DEFAULT 0,
+            service TEXT,
+            account TEXT,
+            account_guid TEXT,
+            error INTEGER DEFAULT 0,
+            date INTEGER,
+            date_read INTEGER,
+            date_delivered INTEGER,
+            is_delivered INTEGER DEFAULT 0,
+            is_finished INTEGER DEFAULT 0,
+            is_emote INTEGER DEFAULT 0,
+            is_from_me INTEGER DEFAULT 0,
+            is_empty INTEGER DEFAULT 0,
+            is_delayed INTEGER DEFAULT 0,
+            is_auto_reply INTEGER DEFAULT 0,
+            is_prepared INTEGER DEFAULT 0,
+            is_read INTEGER DEFAULT 0,
+            is_system_message INTEGER DEFAULT 0,
+            is_sent INTEGER DEFAULT 0,
+            has_dd_results INTEGER DEFAULT 0,
+            is_service_message INTEGER DEFAULT 0,
+            is_forward INTEGER DEFAULT 0,
+            was_downgraded INTEGER DEFAULT 0,
+            is_archive INTEGER DEFAULT 0,
+            cache_has_attachments INTEGER DEFAULT 0,
+            cache_roomnames TEXT,
+            was_data_detected INTEGER DEFAULT 0,
+            was_deduplicated INTEGER DEFAULT 0,
+            is_audio_message INTEGER DEFAULT 0,
+            is_played INTEGER DEFAULT 0,
+            date_played INTEGER,
+            item_type INTEGER DEFAULT 0,
+            other_handle INTEGER DEFAULT 0,
+            group_title TEXT,
+            group_action_type INTEGER DEFAULT 0,
+            share_status INTEGER DEFAULT 0,
+            share_direction INTEGER DEFAULT 0,
+            is_expirable INTEGER DEFAULT 0,
+            expire_state INTEGER DEFAULT 0,
+            message_action_type INTEGER DEFAULT 0,
+            message_source INTEGER DEFAULT 0,
+            associated_message_guid TEXT,
+            associated_message_type INTEGER DEFAULT 0,
+            balloon_bundle_id TEXT,
+            payload_data BLOB,
+            expressive_send_style_id TEXT,
+            associated_message_range_location INTEGER DEFAULT 0,
+            associated_message_range_length INTEGER DEFAULT 0,
+            time_expressive_send_played INTEGER,
+            message_summary_info BLOB,
+            ck_sync_state INTEGER DEFAULT 0,
+            ck_record_id TEXT,
+            ck_record_change_tag TEXT,
+            destination_caller_id TEXT,
+            is_corrupt INTEGER DEFAULT 0,
+            reply_to_guid TEXT,
+            sort_id INTEGER,
+            is_spam INTEGER DEFAULT 0,
+            has_unseen_mention INTEGER DEFAULT 0,
+            thread_originator_guid TEXT,
+            thread_originator_part TEXT,
+            syndication_ranges TEXT,
+            synced_syndication_ranges TEXT,
+            was_delivered_quietly INTEGER DEFAULT 0,
+            did_notify_recipient INTEGER DEFAULT 0,
+            date_retracted INTEGER,
+            date_edited INTEGER,
+            date_recovered INTEGER,
+            was_detonated INTEGER DEFAULT 0,
+            part_count INTEGER,
+            is_stewie INTEGER DEFAULT 0,
+            is_sos INTEGER DEFAULT 0,
+            is_critical INTEGER DEFAULT 0,
+            bia_reference_id TEXT,
+            is_kt_verified INTEGER DEFAULT 0,
+            fallback_hash TEXT,
+            associated_message_emoji TEXT,
+            is_pending_satellite_send INTEGER DEFAULT 0,
+            needs_relay INTEGER DEFAULT 0,
+            schedule_type INTEGER DEFAULT 0,
+            schedule_state INTEGER DEFAULT 0,
+            sent_or_received_off_grid INTEGER DEFAULT 0,
+            is_time_sensitive INTEGER DEFAULT 0,
+            ck_chat_id TEXT
+        )
+        """,
+        """
+        CREATE TABLE attachment (
+            ROWID INTEGER PRIMARY KEY AUTOINCREMENT,
+            guid TEXT UNIQUE NOT NULL,
+            created_date INTEGER DEFAULT 0,
+            start_date INTEGER DEFAULT 0,
+            filename TEXT,
+            uti TEXT,
+            mime_type TEXT,
+            transfer_state INTEGER DEFAULT 0,
+            is_outgoing INTEGER DEFAULT 0,
+            user_info BLOB,
+            transfer_name TEXT,
+            total_bytes INTEGER DEFAULT 0,
+            is_sticker INTEGER DEFAULT 0,
+            sticker_user_info BLOB,
+            attribution_info BLOB,
+            hide_attachment INTEGER DEFAULT 0,
+            ck_sync_state INTEGER DEFAULT 0,
+            ck_server_change_token_blob BLOB,
+            ck_record_id TEXT,
+            original_guid TEXT UNIQUE NOT NULL,
+            is_commsafety_sensitive INTEGER DEFAULT 0,
+            emoji_image_content_identifier TEXT,
+            emoji_image_short_description TEXT,
+            preview_generation_state INTEGER DEFAULT 0
+        )
+        """,
+        """
+        CREATE TABLE chat_handle_join (
+            chat_id INTEGER REFERENCES chat (ROWID) ON DELETE CASCADE,
+            handle_id INTEGER REFERENCES handle (ROWID) ON DELETE CASCADE,
+            UNIQUE(chat_id, handle_id)
+        )
+        """,
+        """
+        CREATE TABLE chat_message_join (
+            chat_id INTEGER REFERENCES chat (ROWID) ON DELETE CASCADE,
+            message_id INTEGER REFERENCES message (ROWID) ON DELETE CASCADE,
+            message_date INTEGER DEFAULT 0,
+            PRIMARY KEY (chat_id, message_id)
+        )
+        """,
+        """
+        CREATE TABLE chat_recoverable_message_join (
+            chat_id INTEGER REFERENCES chat (ROWID) ON DELETE CASCADE,
+            message_id INTEGER REFERENCES message (ROWID) ON DELETE CASCADE,
+            delete_date INTEGER,
+            ck_sync_state INTEGER DEFAULT 0,
+            PRIMARY KEY (chat_id, message_id),
+            CHECK (delete_date != 0)
+        )
+        """,
+        """
+        CREATE TABLE message_attachment_join (
+            message_id INTEGER REFERENCES message (ROWID) ON DELETE CASCADE,
+            attachment_id INTEGER REFERENCES attachment (ROWID) ON DELETE CASCADE,
+            UNIQUE(message_id, attachment_id)
+        )
+        """,
+    ]
+
+    /// Indexes on the tables above, including the partial indexes Messages relies on.
+    static let messagesIndexes: [String] = [
+        "CREATE INDEX chat_idx_is_filtered ON chat(is_filtered)",
+        "CREATE INDEX message_idx_is_time_sensitive ON message(is_time_sensitive) WHERE is_time_sensitive=1",
+        "CREATE INDEX chat_message_join_idx_message_id_only ON chat_message_join(message_id)",
+        "CREATE INDEX chat_recoverable_message_join_message_id_idx ON chat_recoverable_message_join(message_id)",
+        "CREATE INDEX message_idx_is_scheduled_message ON message(schedule_type, rowid) WHERE schedule_type=2",
+        "CREATE INDEX chat_idx_group_id ON chat(group_id)",
+        "CREATE INDEX message_idx_fallback_hash ON message(fallback_hash) WHERE fallback_hash IS NOT NULL",
+        "CREATE INDEX message_idx_date ON message(date)",
+        "CREATE INDEX chat_idx_ck_sync_state ON chat(ck_sync_state)",
+        "CREATE INDEX message_idx_isRead_isFromMe_itemType ON message(is_read, is_from_me, item_type, is_finished, is_system_message) WHERE is_read = 0 AND is_from_me = 0 AND item_type = 0 AND is_finished = 1 AND is_system_message = 0",
+        "CREATE INDEX message_idx_is_sent_is_from_me_error ON message(is_sent, is_from_me, error)",
+        "CREATE INDEX chat_idx_chat_identifier ON chat(chat_identifier)",
+        "CREATE INDEX message_idx_associated_message2 ON message(associated_message_guid) WHERE associated_message_guid is not null",
+        "CREATE INDEX attachment_idx_ck_sync_state ON attachment(ck_sync_state)",
+        "CREATE INDEX message_idx_was_downgraded ON message(was_downgraded)",
+        "CREATE INDEX attachment_idx_purged_attachments_v2 ON attachment(hide_attachment,ck_sync_state,transfer_state) WHERE hide_attachment=0 AND (ck_sync_state=1 OR ck_sync_state=4) AND transfer_state=0",
+        "CREATE INDEX message_idx_isRead_1_isFromMe_0_itemType_0_isFinished_1_isSystemMessage_0 ON message(is_read, is_from_me, item_type, is_finished, is_system_message, date DESC) WHERE is_read = 1 AND is_from_me = 0 AND item_type = 0 AND is_finished = 1 AND is_system_message = 0",
+        "CREATE INDEX message_idx_thread_originator_guid ON message(thread_originator_guid)",
+        "CREATE INDEX handle_idx_id ON handle(id, rowid)",
+        "CREATE INDEX message_idx_handle ON message(handle_id, date)",
+        "CREATE INDEX chat_handle_join_idx_handle_id ON chat_handle_join(handle_id)",
+        "CREATE INDEX message_attachment_join_idx_attachment_id ON message_attachment_join(attachment_id)",
+        "CREATE INDEX message_idx_undelivered_one_to_one_imessage ON message(cache_roomnames,service,is_sent,is_delivered,was_downgraded,item_type) where cache_roomnames IS NULL AND service IN ('iMessage','RCS') AND is_sent = 1 AND is_delivered = 0 AND was_downgraded = 0 AND item_type == 0 AND schedule_type == 0",
+        "CREATE INDEX message_idx_is_pending_satellite_message ON message(is_pending_satellite_send) WHERE is_pending_satellite_send=1",
+        "CREATE INDEX message_idx_composite_scheduled_message ON message(schedule_type, schedule_state)",
+        "CREATE INDEX chat_message_join_idx_message_date_only ON chat_message_join(message_date)",
+        "CREATE INDEX chat_idx_chat_identifier_service_name ON chat(chat_identifier, service_name)",
+        "CREATE INDEX attachment_idx_is_sticker ON attachment(is_sticker)",
+        "CREATE INDEX message_idx_handle_id ON message(handle_id)",
+        "CREATE INDEX chat_message_join_idx_message_date_and_id ON chat_message_join(message_date,message_id)",
+        "CREATE INDEX message_idx_is_read ON message(is_read, is_from_me, is_finished)",
+        "CREATE INDEX message_attachment_join_idx_message_id ON message_attachment_join(message_id)",
+        "CREATE INDEX message_idx_failed ON message(is_finished, is_from_me, error)",
+        "CREATE INDEX message_idx_ck_sync_state_service ON message(ck_sync_state, service)",
+        "CREATE INDEX message_idx_expire_state ON message(expire_state)",
+        "CREATE INDEX chat_idx_is_archived_is_filtered ON chat(is_archived, is_filtered) WHERE is_archived = 0",
+        "CREATE INDEX message_idx_unread_finished_not_from_me_newest_first ON message(is_read, is_finished, is_from_me, date DESC, ROWID DESC) WHERE is_read = 0 AND is_finished = 1 AND is_from_me = 0",
+        "CREATE INDEX chat_idx_is_archived ON chat(is_archived)",
+        "CREATE INDEX chat_message_join_idx_message_date_id_chat_id ON chat_message_join(chat_id, message_date, message_id)",
+        "CREATE INDEX message_idx_other_handle ON message(other_handle)",
+        "CREATE INDEX chat_idx_chat_room_name_service_name ON chat(room_name, service_name)",
+        "CREATE INDEX message_idx_schedule_state ON message(schedule_state)",
+        "CREATE INDEX chat_message_join_idx_chat_id ON chat_message_join(chat_id)",
+        "CREATE INDEX message_idx_cache_has_attachments ON message(cache_has_attachments)",
+    ]
+
+    /// `CallHistory.storedata`, a Core Data store: calls and the handles of group call participants.
+    static let callHistoryTables: [String] = [
+        """
+        CREATE TABLE ZCALLRECORD (
+            Z_PK INTEGER PRIMARY KEY,
+            Z_ENT INTEGER,
+            Z_OPT INTEGER,
+            ZANSWERED INTEGER,
+            ZAUTOANSWEREDREASON INTEGER,
+            ZCALLDIRECTORYIDENTITYTYPE INTEGER,
+            ZCALL_CATEGORY INTEGER,
+            ZCALLTYPE INTEGER,
+            ZCOMMUNICATIONTRUSTSCORE INTEGER,
+            ZDISCONNECTED_CAUSE INTEGER,
+            ZFACE_TIME_DATA INTEGER,
+            ZFILTERED_OUT_REASON INTEGER,
+            ZHANDLE_TYPE INTEGER,
+            ZHASMESSAGE INTEGER,
+            ZJUNKCONFIDENCE INTEGER,
+            ZNEEDEDSCANNOUNCEMENT INTEGER,
+            ZNUMBER_AVAILABILITY INTEGER,
+            ZORIGINATED INTEGER,
+            ZORIGINATINGUITYPE INTEGER,
+            ZREAD INTEGER,
+            ZSCREENSHARINGTYPE INTEGER,
+            ZUSEDEMERGENCYVIDEOSTREAMING INTEGER,
+            ZVERIFICATIONSTATUS INTEGER,
+            ZWASEMERGENCYCALL INTEGER,
+            ZINITIATOR INTEGER,
+            ZDATE TIMESTAMP,
+            ZDURATION FLOAT,
+            ZADDRESS VARCHAR,
+            ZBLOCKEDBYEXTENSION VARCHAR,
+            ZBLOCKEDBYEXTENSIONNAME VARCHAR,
+            ZIDENTITYEXTENSION VARCHAR,
+            ZISO_COUNTRY_CODE VARCHAR,
+            ZJUNKIDENTIFICATIONCATEGORY VARCHAR,
+            ZLOCATION VARCHAR,
+            ZNAME VARCHAR,
+            ZORIGINATINGDEVICENAME VARCHAR,
+            ZSERVICE_PROVIDER VARCHAR,
+            ZUNIQUE_ID VARCHAR,
+            ZCONVERSATIONID BLOB,
+            ZIMAGEURL VARCHAR,
+            ZLOCALPARTICIPANTUUID BLOB,
+            ZOUTGOINGLOCALPARTICIPANTUUID BLOB,
+            ZPARTICIPANTGROUPUUID BLOB,
+            ZREMINDERUUID BLOB
+        )
+        """,
+        """
+        CREATE TABLE ZHANDLE (
+            Z_PK INTEGER PRIMARY KEY,
+            Z_ENT INTEGER,
+            Z_OPT INTEGER,
+            ZTYPE INTEGER,
+            ZNORMALIZEDVALUE VARCHAR,
+            ZVALUE VARCHAR
+        )
+        """,
+        """
+        CREATE TABLE Z_2REMOTEPARTICIPANTHANDLES (
+            Z_2REMOTEPARTICIPANTCALLS INTEGER,
+            Z_4REMOTEPARTICIPANTHANDLES INTEGER,
+            PRIMARY KEY (Z_2REMOTEPARTICIPANTCALLS, Z_4REMOTEPARTICIPANTHANDLES)
+        )
+        """,
+    ]
+
+    /// Indexes on the call history tables above.
+    static let callHistoryIndexes: [String] = [
+        "CREATE INDEX ZCALLRECORD_ZINITIATOR_INDEX ON ZCALLRECORD (ZINITIATOR)",
+        "CREATE INDEX Z_2REMOTEPARTICIPANTHANDLES_Z_4REMOTEPARTICIPANTHANDLES_INDEX ON Z_2REMOTEPARTICIPANTHANDLES (Z_4REMOTEPARTICIPANTHANDLES, Z_2REMOTEPARTICIPANTCALLS)",
+        "CREATE INDEX Z_CallRecord_byDateIndex ON ZCALLRECORD (ZDATE COLLATE BINARY ASC)",
+        "CREATE INDEX Z_CallRecord_byLocalParticipantUUIDIndex ON ZCALLRECORD (ZLOCALPARTICIPANTUUID COLLATE BINARY ASC)",
+        "CREATE INDEX Z_CallRecord_byOutgoingLocalParticipantUUIDIndex ON ZCALLRECORD (ZOUTGOINGLOCALPARTICIPANTUUID COLLATE BINARY ASC)",
+        "CREATE UNIQUE INDEX Z_CallRecord_UNIQUE_unique_id ON ZCALLRECORD (ZUNIQUE_ID COLLATE BINARY ASC)",
+        "CREATE INDEX Z_Handle_byValueIndex ON ZHANDLE (ZVALUE COLLATE BINARY ASC)",
+        "CREATE INDEX Z_Handle_byNormalizedValueIndex ON ZHANDLE (ZNORMALIZEDVALUE COLLATE BINARY ASC)",
+    ]
+}

@@ -1,0 +1,35 @@
+name: Feature request
+description: Something you'd like tincan to do.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check the [roadmap](https://github.com/AarushSah/tincan/blob/main/docs/roadmap.md) first; it may already cover the idea and what stands in its way.
+
+        **Never paste real messages, names, phone numbers, emails or ids.** Use invented ones such as Maya Chen and `+14155550142` in examples.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What you're trying to do
+      description: The task, and where tincan falls short today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you'd like
+      description: The command, flag or behavior you have in mind, and what it should print or return with `--json`.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you've tried instead
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Personal data
+      options:
+        - label: This request contains no real messages, names, numbers, emails or ids.
+          required: true

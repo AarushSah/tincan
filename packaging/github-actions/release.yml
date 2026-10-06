@@ -1,0 +1,162 @@
+# Inactive draft: GitHub runs workflows only from .github/workflows/. See README.md here.
+#
+# On a v* tag, tests the tagged commit, builds the signed (and, with credentials,
+# notarized) archive with scripts/release.sh and attaches it to a draft GitHub release.
+# Nothing is published: review the draft and publish it by hand.
+#
+# Secrets:
+#   DEVELOPER_ID_CERTIFICATE_P12       Base64 of a .p12 export of the Developer ID
+#                                      Application certificate and its private key
+#   DEVELOPER_ID_CERTIFICATE_PASSWORD  The .p12 export password
+#   NOTARY_APPLE_ID                    Apple Account email for notarization
+#   NOTARY_TEAM_ID                     Developer team ID
+#   NOTARY_APP_PASSWORD                App-specific password for that Apple Account
+#
+# Without the two certificate secrets the release job doesn't run, so no macOS minutes are
+# spent. Without the three notary secrets the archive is signed but not notarized, and the
+# draft says so.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  XCODE_VERSION: "26.6"
+
+jobs:
+  secrets:
+    name: Check release secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      signing: ${{ steps.check.outputs.signing }}
+      notarize: ${{ steps.check.outputs.notarize }}
+    steps:
+      - id: check
+        env:
+          CERTIFICATE: ${{ secrets.DEVELOPER_ID_CERTIFICATE_P12 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_CERTIFICATE_PASSWORD }}
+          NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
+          NOTARY_TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}
+          NOTARY_APP_PASSWORD: ${{ secrets.NOTARY_APP_PASSWORD }}
+        run: |
+          if [ -n "$CERTIFICATE" ] && [ -n "$CERTIFICATE_PASSWORD" ]; then
+            echo "signing=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "signing=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::No Developer ID certificate secrets; not building a release."
+          fi
+          if [ -n "$NOTARY_APPLE_ID" ] && [ -n "$NOTARY_TEAM_ID" ] && [ -n "$NOTARY_APP_PASSWORD" ]; then
+            echo "notarize=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "notarize=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::No notarization secrets; the release will be signed but not notarized."
+          fi
+
+  release:
+    name: Build and draft the release
+    needs: secrets
+    if: needs.secrets.outputs.signing == 'true'
+    runs-on: macos-26
+    timeout-minutes: 90
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Select Xcode
+        run: |
+          xcode="/Applications/Xcode_${XCODE_VERSION}.app"
+          if [ -d "$xcode" ]; then
+            sudo xcode-select --switch "$xcode"
+          else
+            echo "::warning::$xcode isn't on this runner image; using $(xcode-select --print-path)."
+          fi
+          swift --version
+
+      - name: Check the tag matches the version
+        run: |
+          version="$(plutil -extract CFBundleShortVersionString raw -o - Support/Info.plist)"
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME doesn't match version $version in Support/Info.plist."
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Test
+        run: ./scripts/check.sh
+
+      # A temporary keychain holds the certificate and the notary profile for this run only.
+      - name: Import the Developer ID certificate
+        env:
+          CERTIFICATE: ${{ secrets.DEVELOPER_ID_CERTIFICATE_P12 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_CERTIFICATE_PASSWORD }}
+        run: |
+          keychain="$RUNNER_TEMP/tincan-release.keychain-db"
+          keychain_password="$(openssl rand -base64 32)"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          printf '%s' "$CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security import "$RUNNER_TEMP/certificate.p12" -k "$keychain" -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          rm -f "$RUNNER_TEMP/certificate.p12"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$keychain_password" "$keychain" > /dev/null
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          echo "RELEASE_KEYCHAIN=$keychain" >> "$GITHUB_ENV"
+
+      - name: Save notarization credentials
+        if: needs.secrets.outputs.notarize == 'true'
+        env:
+          NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
+          NOTARY_TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}
+          NOTARY_APP_PASSWORD: ${{ secrets.NOTARY_APP_PASSWORD }}
+        run: |
+          xcrun notarytool store-credentials tincan-release --apple-id "$NOTARY_APPLE_ID" \
+            --team-id "$NOTARY_TEAM_ID" --password "$NOTARY_APP_PASSWORD" --keychain "$RELEASE_KEYCHAIN"
+          echo "TINCAN_NOTARY_PROFILE=tincan-release" >> "$GITHUB_ENV"
+          echo "TINCAN_NOTARY_KEYCHAIN=$RELEASE_KEYCHAIN" >> "$GITHUB_ENV"
+
+      - name: Build, sign, notarize and package
+        run: ./scripts/release.sh
+
+      - name: Attach to a draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NOTARIZED: ${{ needs.secrets.outputs.notarize }}
+        run: |
+          archive="dist/tincan-$VERSION-macos.tar.gz"
+          {
+            echo "tincan $VERSION. See CHANGELOG.md for what changed."
+            echo
+            echo "SHA-256: \`$(cut -d ' ' -f 1 "$archive.sha256")\`"
+            if [ "$NOTARIZED" != true ]; then
+              echo
+              echo "**Not notarized**: the notarization secrets were missing. Don't publish this draft."
+            fi
+          } > "$RUNNER_TEMP/notes.md"
+          if draft="$(gh release view "$GITHUB_REF_NAME" --json isDraft --jq .isDraft 2> /dev/null)"; then
+            # A re-run replaces the draft's files, never a published release's.
+            if [ "$draft" != true ]; then
+              echo "::error::Release $GITHUB_REF_NAME is already published; not replacing its files."
+              exit 1
+            fi
+            gh release upload "$GITHUB_REF_NAME" "$archive" "$archive.sha256" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "$archive" "$archive.sha256" --draft --verify-tag \
+              --title "tincan $VERSION" --notes-file "$RUNNER_TEMP/notes.md"
+          fi
+
+      - name: Remove the keychain
+        if: always()
+        run: |
+          if [ -n "${RELEASE_KEYCHAIN:-}" ]; then
+            security delete-keychain "$RELEASE_KEYCHAIN" || true
+          fi

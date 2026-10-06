@@ -1,0 +1,24 @@
+(root): object
+command: string
+data: object
+data.addresses: array (empty)
+data.conversations: array
+data.conversations[]: object
+data.conversations[].current_service: string
+data.conversations[].kind: string
+data.conversations[].last_activity: string
+data.conversations[].messages: number
+data.conversations[].name: string
+data.conversations[].ref: string
+data.conversations[].unread: number
+data.name: string
+data.participants: array
+data.participants[]: object
+data.participants[].address: string
+data.participants[].contact: string
+data.participants[].name: string
+data.ref: string
+ok: bool
+schema: number
+tincan: string
+warnings: array (empty)

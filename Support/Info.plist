@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleIdentifier</key>
+	<string>io.github.aarushsah.tincan</string>
+	<key>CFBundleName</key>
+	<string>tincan</string>
+	<key>CFBundleDisplayName</key>
+	<string>tincan</string>
+	<key>CFBundleShortVersionString</key>
+	<string>0.1.0</string>
+	<key>CFBundleVersion</key>
+	<string>0.1.0</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<!-- macOS asks for permissions on behalf of the app that runs tincan. It shows these
+	     reasons only when tincan is its own responsible process, as when a launchd job runs
+	     it directly. -->
+	<key>NSContactsUsageDescription</key>
+	<string>tincan reads your contacts to show who is behind each conversation and call, and updates a contact only when you ask it to.</string>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>tincan asks Messages to send the texts that you, or an assistant you approve, choose to send.</string>
+</dict>
+</plist>

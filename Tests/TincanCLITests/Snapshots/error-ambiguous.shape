@@ -1,0 +1,20 @@
+(root): object
+command: string
+error: object
+error.candidates: array
+error.candidates[]: object
+error.candidates[].addresses: array
+error.candidates[].addresses[]: string
+error.candidates[].conversations: number
+error.candidates[].detail: string
+error.candidates[].last_activity: string
+error.candidates[].name: string
+error.candidates[].organization?: string
+error.candidates[].reference: string
+error.code: string
+error.hint: string
+error.message: string
+ok: bool
+schema: number
+tincan: string
+warnings: array (empty)

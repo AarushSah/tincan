@@ -1,0 +1,21 @@
+(root): object
+command: string
+data: object
+data.contact: object
+data.contact.emails: array
+data.contact.emails[]: object
+data.contact.emails[].label: string
+data.contact.emails[].value: string
+data.contact.family_name: string
+data.contact.given_name: string
+data.contact.name: string
+data.contact.phones: array
+data.contact.phones[]: object
+data.contact.phones[].label: string
+data.contact.phones[].value: string
+data.contact.ref: string
+data.dry_run: bool
+ok: bool
+schema: number
+tincan: string
+warnings: array (empty)

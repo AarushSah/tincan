@@ -1,0 +1,19 @@
+(root): object
+command: string
+data: object
+data.checks: array
+data.checks[]: object
+data.checks[].detail: string
+data.checks[].fix?: string
+data.checks[].id: string
+data.checks[].status: string
+data.checks[].title: string
+data.executable: string
+data.healthy: bool
+data.host: object
+data.host.kind: string
+data.version: string
+ok: bool
+schema: number
+tincan: string
+warnings: array (empty)

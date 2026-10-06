@@ -1,0 +1,10 @@
+(root): object
+command: string
+error: object
+error.code: string
+error.hint: string
+error.message: string
+ok: bool
+schema: number
+tincan: string
+warnings: array (empty)

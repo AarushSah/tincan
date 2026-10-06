@@ -1,0 +1,11 @@
+(root): object
+command: string
+data: object
+data.content: string
+data.name: string
+data.topic: string
+data.version: string
+ok: bool
+schema: number
+tincan: string
+warnings: array (empty)

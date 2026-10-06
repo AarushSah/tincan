@@ -1,0 +1,26 @@
+(root): object
+command: string
+data: array
+data[]: object
+data[].at: string
+data[].caller?: string
+data[].direction: string
+data[].duration_seconds: number
+data[].id: number
+data[].junk?: bool
+data[].kind: string
+data[].location?: string
+data[].outcome: string
+data[].returned?: object
+data[].returned.at: string
+data[].returned.via: string
+data[].with: array | array (empty)
+data[].with[]: object
+data[].with[].address: string
+data[].with[].contact?: string
+data[].with[].name: string
+has_more: bool
+ok: bool
+schema: number
+tincan: string
+warnings: array (empty)

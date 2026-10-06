@@ -1,0 +1,13 @@
+(root): object
+command: string
+data: object
+data.directory: string
+data.dry_run: bool
+data.files: array
+data.files[]: object
+data.files[].path: string
+data.files[].status: string
+ok: bool
+schema: number
+tincan: string
+warnings: array (empty)

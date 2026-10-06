@@ -1,0 +1,32 @@
+(root): object
+command: string
+data: array
+data[]: object
+data[].cards: array
+data[].cards[]: object
+data[].cards[].birthday?: string
+data[].cards[].conversations: number
+data[].cards[].emails: array | array (empty)
+data[].cards[].emails[]: object
+data[].cards[].emails[].label: string
+data[].cards[].emails[].value: string
+data[].cards[].family_name: string
+data[].cards[].given_name: string
+data[].cards[].job_title?: string
+data[].cards[].last_activity?: string
+data[].cards[].name: string
+data[].cards[].organization?: string
+data[].cards[].phones: array
+data[].cards[].phones[]: object
+data[].cards[].phones[].label: string
+data[].cards[].phones[].normalized: string
+data[].cards[].phones[].value: string
+data[].cards[].ref: string
+data[].kind: string
+data[].names_match: bool
+data[].shared_addresses: array | array (empty)
+data[].shared_addresses[]: string
+ok: bool
+schema: number
+tincan: string
+warnings: array (empty)

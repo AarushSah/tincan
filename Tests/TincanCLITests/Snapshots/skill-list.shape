@@ -1,0 +1,11 @@
+(root): object
+command: string
+data: array
+data[]: object
+data[].file: string
+data[].name: string
+data[].summary: string
+ok: bool
+schema: number
+tincan: string
+warnings: array (empty)
