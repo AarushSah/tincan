@@ -134,7 +134,10 @@ struct EnvelopeTests {
         // The step names the app that holds the permission, and where to grant it.
         #expect(try (result.error?["message"] as? String)?.contains("doesn't have Full Disk Access") == true)
         #expect(try (result.error?["hint"] as? String)?.contains("System Settings → Privacy & Security → Full Disk Access") == true)
-        #expect(try (result.error?["hint"] as? String)?.contains("quit and reopen") == true)
+        // An app is quit and reopened; a program launchd started, such as a CI runner's
+        // service, is restarted.
+        let hint = try (result.error?["hint"] as? String) ?? ""
+        #expect(hint.contains("quit and reopen") || hint.contains("restart"), "\(hint)")
         let human = try world.run(["read", "Maya"], environment: environment)
         #expect(human.status == 4)
         #expect(human.stderr.contains("Full Disk Access"))
