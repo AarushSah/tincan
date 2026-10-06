@@ -1,17 +1,9 @@
-# GitHub Actions drafts
+# Release workflow draft
 
-These workflows are inactive. GitHub runs workflows only from `.github/workflows/`, and this repository doesn't have one yet. Until then, `./scripts/check.sh` is the gate; see [development](../../docs/development.md#test).
-
-| Draft | What it does |
-| --- | --- |
-| `ci.yml` | On pushes to `main` and pull requests: `swift build` and `./scripts/check.sh` on `macos-26` with Xcode 26.6 (Swift 6.3), with `.build` cached; the test job runs `./scripts/check.sh --no-lint`. A second job runs `./scripts/lint.sh` in a `swift:6.3` Linux container and fails the run on any finding. |
-| `release.yml` | On `v*` tags: tests the tagged commit, runs `./scripts/release.sh` and attaches the archive and its SHA-256 to a draft release. It needs the secrets listed at the top of the file. |
-
-To enable one, move it into `.github/workflows/`:
+`release.yml` is inactive: GitHub runs workflows only from `.github/workflows/`. On `v*` tags it would test the tagged commit, run `./scripts/release.sh`, and attach the archive and its SHA-256 to a draft release. It needs the secrets listed at the top of the file. To enable it, add those secrets and move it:
 
 ```sh
-mkdir -p .github/workflows
-git mv packaging/github-actions/ci.yml .github/workflows/ci.yml
+git mv packaging/github-actions/release.yml .github/workflows/release.yml
 ```
 
-macOS runners are slow and scarce, so `ci.yml` cancels superseded runs, only `main` saves the build cache, and formatting runs on Linux.
+CI itself runs from [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml); see [development](../../docs/development.md#test).

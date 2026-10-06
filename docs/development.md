@@ -26,7 +26,7 @@ The linker embeds `Support/Info.plist`, every file of the assistant skill in [sk
 ./scripts/check.sh --live
 ```
 
-`scripts/check.sh` checks [formatting](#format) first, then builds tincan and runs `swift test --skip Live`, and fails on any finding or failure. Run it before every commit; there is no CI yet, so it is the gate (inactive drafts wait in [packaging/github-actions/](../packaging/github-actions/)). `--no-lint` skips the formatting check while you iterate. `--live` adds read-only checks against this Mac's Messages and call history that print only counts; run it from a terminal with Full Disk Access after any change to reading or decoding, and after a macOS update.
+`scripts/check.sh` checks [formatting](#format) first, then builds tincan and runs `swift test --skip Live`, and fails on any finding or failure. Run it before every commit. [CI](../.github/workflows/ci.yml) runs the same build and tests on macOS, and the formatting check on Linux, for every pull request and push to `main`. `--no-lint` skips the formatting check while you iterate. `--live` adds read-only checks against this Mac's Messages and call history that print only counts; run it from a terminal with Full Disk Access after any change to reading or decoding, and after a macOS update.
 
 The tests never touch this Mac's real data. `Tests/TincanKitTests` tests the model against fixtures built from invented people. `Tests/TincanCLITests` runs the real `tincan` binary (or the one `TINCAN_TEST_BINARY` names) against a fixture world, with no terminal, and checks formatted output, exit codes and JSON.
 
@@ -94,7 +94,7 @@ Nothing has been published yet. `scripts/release.sh` builds a universal binary, 
 TINCAN_NOTARY_PROFILE=<profile> ./scripts/release.sh
 ```
 
-`--unsigned` makes an ad-hoc signed archive to test packaging, never to publish. To release, set the version in `Support/Info.plist`, date its [changelog](../CHANGELOG.md) section, tag `v<version>`, and attach the archive and its `.sha256` to a GitHub release. The draft [release workflow](../packaging/github-actions/release.yml) and [Homebrew formula](../packaging/homebrew/tincan.rb) take over once the repository is public.
+`--unsigned` makes an ad-hoc signed archive to test packaging, never to publish. To release, set the version in `Support/Info.plist`, date its [changelog](../CHANGELOG.md) section, tag `v<version>`, and attach the archive and its `.sha256` to a GitHub release. The inactive [release workflow](../packaging/github-actions/release.yml) and the [Homebrew formula](../packaging/homebrew/tincan.rb) can take over once releases are published.
 
 ## Find the code
 

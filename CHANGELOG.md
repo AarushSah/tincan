@@ -66,9 +66,9 @@ First version.
 
 - tincan runs with the macOS permissions of the app that starts it, like other command-line tools. `doctor` names that app and checks the four permissions for it, with steps to grant each; `doctor --fix` walks through them in a terminal, and `doctor --request contacts` asks macOS for Contacts access for an assistant once the person agrees.
 - `scripts/install.sh` builds tincan, signs it ad-hoc (or with a certificate named by `TINCAN_SIGNING_IDENTITY`) with the hardened runtime, and installs it with a man page and zsh, bash and fish completions.
-- `scripts/release.sh` builds a signed, notarized universal binary with its man page, completions, license and third-party notices. `packaging/homebrew/tincan.rb` is a Homebrew formula template, and `packaging/github-actions/` holds inactive CI and release workflows.
+- `scripts/release.sh` builds a signed, notarized universal binary with its man page, completions, license and third-party notices. `packaging/homebrew/tincan.rb` is a Homebrew formula template, and `packaging/github-actions/` holds an inactive release workflow.
 
 ### Development
 
 - `TINCAN_MESSAGES_DB`, `TINCAN_CALL_HISTORY_DB`, `TINCAN_CONTACTS_FILE` and `TINCAN_CONFIG` run tincan on invented data, with sending off. `TINCAN_EXPORT_WORLD` exports the fixture world the tests use.
-- `scripts/check.sh` checks formatting, builds in the Swift 6 language mode and runs the tests, which compare JSON shapes against snapshots; `--live` adds read-only checks against this Mac's Messages that print counts only.
+- `scripts/check.sh` checks formatting, builds in the Swift 6 language mode and runs the tests, which compare JSON shapes against snapshots; `--live` adds read-only checks against this Mac's Messages that print counts only. CI runs the formatting check, build and tests, without `--live`, for every pull request and push to `main`.
