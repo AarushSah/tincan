@@ -79,6 +79,8 @@ Replace Maya with someone you text. `send me` goes to your conversation with you
 
 Formatted results go to standard output. Next steps such as `Earlier: tincan read Maya --before m:<id>` or `More with --limit 40.`, warnings and questions go to standard error, so a terminal shows everything while `tincan chats | grep Maya` gets only the result. `-j` is `--json` and `-y` is `--yes` wherever they exist, and `-n` is `--limit` in every listing: `tincan chats -n 5 -j`. For scripts, use [`--json`](assistants.md).
 
+tincan also tells your terminal what it's doing, with the [Program Status Protocol](https://www.superlogical.com/rex/docs/build/program-status) (OSC 7501), so a terminal that supports it can show this on a tab you aren't looking at. `send` reports how many of its messages Messages has confirmed, a question such as `Send 2 messages to Sam Park?` shows that tincan is waiting for you, and `doctor --fix` and `doctor --request contacts` show when they wait for System Settings or a question from macOS. `send` and `doctor` end by reporting what happened, such as `Sent 2 messages to Sam Park.` or why it failed, and answering no reports that tincan stopped. Reads report nothing, and the terminal clears what's left when tincan exits. Reports go to standard error when it is a terminal, never with `--json`, and not when `TERM` is `dumb`. Terminals without support ignore them.
+
 A mistyped command names the one you probably meant, and a name of several words without quotes shows the quoted command:
 
 ```text

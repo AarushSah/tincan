@@ -31,6 +31,14 @@ struct Terminal {
         isatty(STDIN_FILENO) == 1 && isatty(STDOUT_FILENO) == 1
     }
 
+    /// Whether tincan reports its status to the terminal (`ProgramStatus`): only when
+    /// standard error is a terminal, never for JSON, and not when TERM is `dumb`.
+    static func reportsStatus(
+        json: Bool, environment: [String: String] = ProcessInfo.processInfo.environment, standardError: Bool = isatty(STDERR_FILENO) == 1
+    ) -> Bool {
+        !json && standardError && environment["TERM"] != "dumb"
+    }
+
     static func detectWidth(environment: [String: String], interactive: Bool) -> Int {
         if let columns = environment["COLUMNS"].flatMap(Int.init), columns >= 20 { return columns }
         var size = winsize()

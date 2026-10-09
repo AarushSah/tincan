@@ -19,15 +19,21 @@ func confirmChange(yes: Bool, context: Context, preview: () -> Void, question: S
     preview()
     // Warnings, such as conversations that use a removed number, come before the question.
     context.output.flushWarnings()
-    guard confirm(question, style: context.style) else {
+    guard confirm(question, context: context) else {
         context.output.line(context.style.muted("Nothing was changed."))
+        context.programStatus.idle("Nothing was changed.")
         throw ExitCode.success
     }
+    // The change takes a moment, and the terminal drops this report when tincan exits.
+    context.programStatus.working()
 }
 
 /// Asks a yes/no question on the terminal. Defaults to no. The question can name people,
-/// so it is sanitized like all human output.
-func confirm(_ question: String, style: Style) -> Bool {
+/// so it is sanitized like all human output. Every question approves an action, and the
+/// terminal's status says tincan is waiting for it; the caller reports what comes next.
+func confirm(_ question: String, context: Context) -> Bool {
+    let style = context.style
+    context.programStatus.blocked(.permission, question)
     let prompt = TerminalText.sanitize(style.accent("? ") + question + style.muted(" [y/N] "), keepStyles: style.enabled)
     FileHandle.standardError.write(Data(prompt.utf8))
     guard let answer = readLine()?.trimmingCharacters(in: .whitespaces).lowercased() else { return false }

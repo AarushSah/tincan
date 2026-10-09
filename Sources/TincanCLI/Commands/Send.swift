@@ -256,11 +256,18 @@ struct Send: AsyncParsableCommand {
                 renderPlan(plan, to: to, participants: participants, context: context, dryRun: false)
                 // Warnings such as a shared number belong before the question, not after it.
                 context.output.flushWarnings()
-                guard confirm(plan.question, style: context.style) else {
+                guard confirm(plan.question, context: context) else {
                     context.output.line(context.style.muted("Nothing was sent."))
+                    context.programStatus.idle("Nothing was sent.")
                     return
                 }
             }
+            // The terminal's status counts what Messages confirmed, bubbles and files alike.
+            let total = plan.typing.bubbles.count + plan.files.count
+            let recipient = route.isSelf ? "yourself" : route.name
+            let sending = "Sending \(Formatting.plural(total, "message")) to \(recipient)"
+            context.programStatus.keepsOutcome = true
+            context.programStatus.working(sending, progress: 0)
             if context.sources.isOverridden {
                 // Messages would really send, to people from other data, and tincan could
                 // never confirm it in a database Messages doesn't write to.
@@ -288,7 +295,7 @@ struct Send: AsyncParsableCommand {
                 for line in Self.fileLines(attachments, width: width, style: context.style) { context.output.status(line) }
                 context.output.flushWarnings()
             }
-            let live = LiveProgress(context: context, plan: plan.typing)
+            let live = LiveProgress(context: context, plan: plan.typing, status: sending, total: total)
             var outcomes = await sender.run(plan.request) { live.handle($0) }
             // Carriers text a refusal back within seconds, after Messages already said sent.
             let checksBounces =
@@ -333,6 +340,7 @@ struct Send: AsyncParsableCommand {
                 bounceCheckSeconds: checksBounces ? bounceWait : nil, ok: ok)
             if !context.output.json { live.summary(outcomes) }
             guard !ok else {
+                context.programStatus.done("Sent \(Formatting.plural(total, "message")) to \(recipient).")
                 // A new conversation has a chat once Messages records the first bubble.
                 let conversation =
                     route.chat?.reference
@@ -345,6 +353,7 @@ struct Send: AsyncParsableCommand {
             // Some or all bubbles didn't go: an error, with every bubble's status kept in data.
             let failure = Self.failure(statuses: outcomes.map(\.status), bounced: outcomes.filter { $0.bounce != nil }.count)
             if context.output.json { context.output.failure(failure, data: result) }
+            context.programStatus.failed(failure.message)
             record()
             throw ExitCode(failure.exit.rawValue)
         }
@@ -527,19 +536,29 @@ extension MessageService: ExpressibleByArgument {
 
 extension Config.TypingMode: ExpressibleByArgument {}
 
-/// Live, single-line progress while bubbles are typed and sent.
+/// Live, single-line progress while bubbles are typed and sent, and the terminal's status:
+/// `status`, with how many of `total` bubbles and files Messages confirmed.
 final class LiveProgress {
     private let context: Context
     private let plan: TypingPlan
     private let interactive: Bool
+    private let statusMessage: String
+    private let total: Int
+    private var confirmed = 0
 
-    init(context: Context, plan: TypingPlan) {
+    init(context: Context, plan: TypingPlan, status: String, total: Int) {
         self.context = context
         self.plan = plan
+        statusMessage = status
+        self.total = total
         interactive = !context.output.json && context.terminal.isInteractive
     }
 
     func handle(_ event: SendEvent) {
+        if case .sent(_, let outcome) = event, Send.confirmedStatuses.contains(outcome.status.rawValue), total > 0 {
+            confirmed += 1
+            context.programStatus.working(statusMessage, progress: confirmed * 100 / total)
+        }
         guard !context.output.json else { return }
         let style = context.style
         switch event {
@@ -565,7 +584,9 @@ final class LiveProgress {
         }
     }
 
+    /// A wait after sending, such as for receipts, whose length is unknown.
     func status(_ text: String) {
+        context.programStatus.working(text)
         guard !context.output.json else { return }
         transient(context.style.muted("  " + text))
     }

@@ -19,6 +19,7 @@ final class Context {
 
     var style: Style { output.style }
     var terminal: Terminal { output.terminal }
+    var programStatus: ProgramStatus { output.programStatus }
 
     func config() throws -> Config { try configResult.get() }
 
@@ -358,7 +359,8 @@ final class Context {
     static func example(_ command: String) -> String { PlanIssue.example(command) }
 }
 
-/// Runs a command body with consistent error reporting and exit codes.
+/// Runs a command body with consistent error reporting and exit codes. Long work that told
+/// the terminal its status reports a failure there too.
 func runCommand(_ name: String, options: GlobalOptions, _ body: (Context) async throws -> Void) async throws {
     let context = Context(command: name, options: options)
     do {
@@ -370,6 +372,7 @@ func runCommand(_ name: String, options: GlobalOptions, _ body: (Context) async 
     } catch {
         let failure = TincanError.wrap(error)
         context.output.failure(failure)
+        context.programStatus.failed(failure.message)
         throw ExitCode(failure.exit.rawValue)
     }
 }

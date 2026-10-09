@@ -96,6 +96,8 @@ struct Doctor: AsyncParsableCommand {
                 let host = PermissionHost.current
                 contactsRequest = Self.requestContacts(provider, host: host, dryRun: dryRun) {
                     context.output.status("Asking macOS whether \(host.subject) may access your contacts. Answer on this Mac's screen.")
+                    context.programStatus.keepsOutcome = true
+                    context.programStatus.blocked(.auth, "Answer macOS: may \(host.subject) access your contacts?")
                 }
             }
             let checks = gather(context: context, contactsRequest: contactsRequest)
@@ -103,7 +105,12 @@ struct Doctor: AsyncParsableCommand {
             context.output.result(
                 Result(healthy: healthy, version: TincanVersion.current, executable: Permissions.executablePath, host: Host(.current), checks: checks))
             if !context.output.json { render(checks, healthy: healthy, context: context) }
-            if !healthy { throw ExitCode(TincanError.Exit.partial.rawValue) }
+            // Only after --fix or --request reported; a plain check reports nothing.
+            guard healthy else {
+                context.programStatus.failed("Needs attention: \(Formatting.list(checks.filter { $0.status == "fail" }.map(\.title))).")
+                throw ExitCode(TincanError.Exit.partial.rawValue)
+            }
+            context.programStatus.done("Ready.")
         }
     }
 
@@ -232,6 +239,9 @@ struct Doctor: AsyncParsableCommand {
         let sources = context.sources
         output.line(style.bold("Setting up tincan") + style.muted("  macOS gives tincan the permissions of \(host.subject)"))
         output.line()
+        let status = context.programStatus
+        status.keepsOutcome = true
+        status.working("Setting up tincan")
 
         var restart = false
         if sources.fullDiskAccess() != .granted {
@@ -257,7 +267,10 @@ struct Doctor: AsyncParsableCommand {
             output.line(style.accent("2. Contacts") + style.muted("  shows names instead of numbers, and lets you add or edit contacts"))
             if provider.authorization == .notDetermined {
                 output.line("   Click OK when macOS asks whether \(host.subject) may access your contacts.")
-                switch provider.requestAccess() {
+                status.blocked(.auth, "Answer macOS: may \(host.subject) access your contacts?")
+                let answer = provider.requestAccess()
+                status.working("Setting up tincan")
+                switch answer {
                 case .authorized, .limited:
                     output.status(style.success("   ✓ ") + "Contacts allowed\n")
                 case .denied, .restricted:
@@ -275,7 +288,10 @@ struct Doctor: AsyncParsableCommand {
         if !sources.isOverridden, Permissions.automation() != .granted {
             output.line(style.accent("3. Sending") + style.muted("  lets \(host.subject) hand your messages to Messages"))
             output.line("   Click OK when macOS asks whether \(host.subject) may control Messages.")
-            if Permissions.automation(prompt: true) == .denied {
+            status.blocked(.auth, "Answer macOS: may \(host.subject) control Messages?")
+            let answer = Permissions.automation(prompt: true)
+            status.working("Setting up tincan")
+            if answer == .denied {
                 output.line("   It was turned off earlier; turn on Messages under \(host.entry) in the list that opens.")
                 Permissions.openSettings(for: .automation)
                 await waitFor("Messages control", context: context) { Permissions.automation() == .granted }
@@ -283,7 +299,9 @@ struct Doctor: AsyncParsableCommand {
         }
         if !sources.isOverridden, Permissions.accessibility() != .granted {
             output.line(style.accent("4. Accessibility") + style.muted("  optional: lets people see you typing"))
-            if confirm("Set up the typing indicator now?", style: style) {
+            let setUp = confirm("Set up the typing indicator now?", context: context)
+            status.working("Setting up tincan")
+            if setUp {
                 output.line("   Turn on \(host.entry) in the list that opens. If it isn't listed, drag it in or click + and choose it.")
                 _ = Permissions.accessibility(prompt: true)
                 Permissions.openSettings(for: .accessibility)
@@ -308,6 +326,8 @@ struct Doctor: AsyncParsableCommand {
     private func waitFor(_ name: String, context: Context, returnMeans: String = "skip", _ granted: @escaping () -> Bool) async -> Bool {
         let style = context.style
         context.output.status(style.muted("   Waiting for \(name)… (press Return to \(returnMeans))"))
+        context.programStatus.blocked(.auth, "Waiting for \(name) in System Settings")
+        defer { context.programStatus.working("Setting up tincan") }
         for _ in 0..<360 {
             if granted() {
                 context.output.status(style.success("   ✓ ") + "\(name) granted\n")

@@ -67,6 +67,7 @@ Other TOML, such as inline tables, arrays of tables, single-quoted or multi-line
 | --- | --- |
 | `TINCAN_OUTPUT=json` | `--json` for every command, including usage errors |
 | `NO_COLOR` | No colors unless `--color always` |
+| `TERM=dumb` | No [status reports](getting-started.md#4-try-it) to the terminal |
 | `TINCAN_CONFIG`, `XDG_CONFIG_HOME` | Another settings file or folder. If it isn't there, commands stop with `config_missing` rather than run without your exclusions. While tincan reads this Mac's Messages, it must also keep every exclusion in `~/.config/tincan/config.toml`, or commands stop with `config_drops_exclusions`. |
 | `TINCAN_MESSAGES_DB`, `TINCAN_CALL_HISTORY_DB`, `TINCAN_CONTACTS_FILE` | Read other data; sending is off. See [development](development.md#run-tincan-on-invented-data). |
 

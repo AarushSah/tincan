@@ -61,6 +61,7 @@ First version.
 - `tincan skill` prints the assistant guide for the installed version, with topics for the details; `tincan skill --export <folder>` writes it as a skill folder.
 - `-n` is `--limit`, `-y` is `--yes` and `-j` is `--json` in every command that takes them.
 - Formatted output ends with the command that continues it, on standard error, so standard output stays the result.
+- tincan reports its status to the terminal with OSC 7501, the Program Status Protocol, on standard error: `send` its progress, questions while they wait for an answer, and `doctor --fix` and `doctor --request contacts` while they wait for System Settings or macOS. `send` and `doctor` then report how they ended. Only when standard error is a terminal, never with `--json` or `TERM=dumb`, and never for reads.
 
 ### Permissions and install
 

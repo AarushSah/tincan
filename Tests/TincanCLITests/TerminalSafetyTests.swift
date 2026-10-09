@@ -190,9 +190,12 @@ struct TerminalSafetyTests {
     }()
 
     /// Fails unless every escape in `output` is one of tincan's own truecolor styles (none
-    /// without color), and no other control, reordering or marker character is left. Lines
-    /// stay within `columns`.
+    /// without color) or status reports, and no other control, reordering or marker
+    /// character is left. Lines stay within `columns`.
     func expectSafe(_ output: String, color: Bool, columns: Int, _ context: String) {
+        // tincan's status reports to the terminal, whose text is checked on its own.
+        #expect(throws: Never.self, "\(context)") { try ProgramStatusTests.reports(output) }
+        let output = output.replacing(try! Regex("\u{1B}\\]7501;[A-Za-z0-9=+/:]*\u{1B}\\\\"), with: "")
         #expect(color || !output.contains("\u{1B}"), "\(context): styled without color")
         let sgr = try! Regex("\u{1B}\\[([0-9;:]*)m", as: (Substring, Substring).self)
         let foreign = Set(output.matches(of: sgr).map { String($0.output.1) }).subtracting(Self.ownStyles)

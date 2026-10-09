@@ -34,6 +34,8 @@ final class Output {
     let json: Bool
     let terminal: Terminal
     let style: Style
+    /// What tincan tells the terminal it is doing, in an interactive terminal only.
+    let programStatus: ProgramStatus
     private(set) var notices: [Notice] = []
 
     init(command: String, options: GlobalOptions) {
@@ -41,6 +43,7 @@ final class Output {
         json = options.wantsJSON
         terminal = Terminal.current(colorMode: json ? .never : options.color)
         style = Style(depth: terminal.colorDepth)
+        programStatus = ProgramStatus(enabled: Terminal.reportsStatus(json: json))
     }
 
     // MARK: Human output
